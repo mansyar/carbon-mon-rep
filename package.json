@@ -1,0 +1,20 @@
+{
+  "name": "carbon-mon-rep",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "scripts": {
+    "dev": "bun workspace run dev",
+    "start": "bun workspace run start",
+    "build": "bun workspace run build",
+    "lint": "bun workspace run lint",
+    "test": "bun workspace run test",
+    "format": "bun workspace run format"
+  }
+}

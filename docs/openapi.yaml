@@ -1,0 +1,788 @@
+openapi: 3.0.3
+info:
+  title: Carbon Emission Monitoring API
+  description: OpenAPI spec for Auth, Emissions, Uploads, Reports, Audit endpoints (MVP + extended)
+  version: 0.1.0
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required: [code, message]
+    AuthRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+    UserCreate:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [Admin, DataEntry, Auditor, Viewer]
+      required: [username, password, role]
+    EmissionBase:
+      type: object
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        emission_type:
+          type: string
+          maxLength: 50
+        value:
+          type: number
+          minimum: 0
+        unit:
+          type: string
+          example: kg
+        timestamp:
+          type: string
+          format: date-time
+        reference_id:
+          type: string
+    EmissionCreate:
+      allOf:
+        - $ref: "#/components/schemas/EmissionBase"
+      required: [site_id, emission_type, value, unit, timestamp]
+    Emission:
+      allOf:
+        - $ref: "#/components/schemas/EmissionBase"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        per_page:
+          type: integer
+    EmissionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Emission"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    BulkUploadResult:
+      type: object
+      properties:
+        upload_id:
+          type: string
+        inserted_count:
+          type: integer
+        failed_count:
+          type: integer
+        error_file_url:
+          type: string
+    UploadStatus:
+      type: object
+      properties:
+        upload_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        progress:
+          type: number
+          format: float
+          description: Percent complete 0-100
+        inserted_count:
+          type: integer
+        failed_count:
+          type: integer
+        error_file_url:
+          type: string
+    UploadResultRow:
+      type: object
+      properties:
+        row_number:
+          type: integer
+        success:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+    UploadTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mapping:
+          type: object
+          additionalProperties:
+            type: string
+        sample_file_url:
+          type: string
+    UploadTemplateCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        mapping:
+          type: object
+          additionalProperties:
+            type: string
+        sample_file:
+          type: string
+          format: binary
+      required: [name, mapping]
+    ReportRequest:
+      type: object
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        interval:
+          type: string
+          enum: [daily, weekly, monthly]
+        format:
+          type: string
+          enum: [pdf, excel]
+      required: [site_id, start_date, end_date, interval, format]
+    ReportStatus:
+      type: object
+      properties:
+        report_id:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, ready, failed]
+        progress:
+          type: number
+        file_url:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+    ReportRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        site_id:
+          type: string
+        params:
+          type: object
+        status:
+          type: string
+        file_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        action:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        diff:
+          type: object
+    AuditListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    AuditExportRequest:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [csv, pdf]
+        filters:
+          type: object
+      required: [format]
+    AuditExportResult:
+      type: object
+      properties:
+        export_id:
+          type: string
+        status:
+          type: string
+        download_url:
+          type: string
+paths:
+  /auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "200":
+          description: Auth tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+              required: [refreshToken]
+      responses:
+        "200":
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /users:
+    post:
+      summary: Create user (Admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  username:
+                    type: string
+                  role:
+                    type: string
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+  /emissions:
+    post:
+      summary: Create a single emission record
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmissionCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Emission"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      summary: List emissions with filters and pagination
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: site_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: emission_type
+          in: query
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of emissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmissionListResponse"
+        "401":
+          description: Unauthorized
+  /emissions/{id}:
+    get:
+      summary: Get emission by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Emission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Emission"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Update emission
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmissionCreate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Emission"
+    delete:
+      summary: Soft-delete emission
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Deleted (soft)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+  /emissions/bulk:
+    post:
+      summary: Bulk upload CSV/Excel
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                mapping_id:
+                  type: string
+                  description: Optional column mapping id
+      responses:
+        "200":
+          description: Bulk upload result (started/processed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkUploadResult"
+        "400":
+          description: Validation or parsing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /uploads/{upload_id}/status:
+    get:
+      summary: Get status for an upload job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: upload_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Upload status and progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadStatus"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /uploads/{upload_id}/results:
+    get:
+      summary: Download upload error/results file or per-row summary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: upload_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv, pdf]
+            default: json
+      responses:
+        "200":
+          description: Downloadable results or JSON summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rows:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UploadResultRow"
+            # alternatively content for CSV/PDF handled via content-negotiation / binary response
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /upload-templates:
+    post:
+      summary: Create an upload template (Admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UploadTemplateCreate"
+      responses:
+        "201":
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadTemplate"
+    get:
+      summary: List upload templates
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Templates list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UploadTemplate"
+  /upload-templates/{id}:
+    get:
+      summary: Get a specific upload template
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Upload template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadTemplate"
+        "404":
+          description: Not found
+  /reports/generate:
+    post:
+      summary: Queue report generation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRequest"
+      responses:
+        "202":
+          description: Report queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report_id:
+                    type: string
+  /reports/{report_id}/status:
+    get:
+      summary: Get status of generated report
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportStatus"
+        "404":
+          description: Not found
+  /reports/{report_id}/download:
+    get:
+      summary: Download generated report file
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Binary file (PDF/Excel)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found
+  /audit-logs:
+    get:
+      summary: Retrieve audit logs with filters and pagination
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: site_id
+          in: query
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Audit logs list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditListResponse"
+  /audit-logs/export:
+    post:
+      summary: Export filtered audit logs (queues export job)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditExportRequest"
+      responses:
+        "202":
+          description: Export queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditExportResult"
+  /audit-logs/exports/{export_id}/download:
+    get:
+      summary: Download audit export result
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: export_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Binary file (CSV/PDF)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found
+security:
+  - bearerAuth: []

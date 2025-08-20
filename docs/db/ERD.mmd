@@ -1,0 +1,105 @@
+%% Mermaid ERD for Carbon Emission Monitoring (core models)
+%% Render with Mermaid supporting erDiagram
+erDiagram
+  USER {
+    UUID id PK
+    string username
+    string password_hash
+    Role role
+    timestamptz created_at
+    timestamptz updated_at
+    timestamptz deleted_at
+  }
+
+  SITE {
+    UUID id PK
+    string name
+    json metadata
+    timestamptz created_at
+    timestamptz updated_at
+    timestamptz deleted_at
+  }
+
+  EMISSION {
+    UUID id PK
+    UUID site_id FK
+    string emission_type
+    decimal value
+    string unit
+    timestamptz timestamp
+    string reference_id
+    UUID created_by FK
+    timestamptz created_at
+    timestamptz updated_at
+    timestamptz deleted_at
+  }
+
+  AUDIT_LOG {
+    UUID id PK
+    UUID user_id FK
+    string action
+    string target_type
+    UUID target_id
+    json diff
+    timestamptz created_at
+  }
+
+  CONFIGURATION {
+    UUID id PK
+    string key
+    json value
+    string scope
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  CSV_MAPPING {
+    UUID id PK
+    string name
+    json mapping
+    UUID created_by FK
+    timestamptz created_at
+  }
+
+  UPLOAD_JOB {
+    UUID id PK
+    UUID user_id FK
+    string file_url
+    UploadStatus status
+    int inserted_count
+    int failed_count
+    string error_file_url
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  REPORT {
+    UUID id PK
+    UUID site_id FK
+    timestamptz period_from
+    timestamptz period_to
+    ReportFormat format
+    string file_url
+    ReportStatus status
+    timestamptz created_at
+  }
+
+  ERP_CONNECTOR {
+    UUID id PK
+    UUID site_id FK
+    ErpType type
+    string config
+    timestamptz last_sync_at
+    ErpStatus status
+    timestamptz created_at
+  }
+
+  %% Relationships
+  SITE ||--o{ EMISSION : "has"
+  USER ||--o{ EMISSION : "creates"
+  USER ||--o{ CSV_MAPPING : "defines"
+  USER ||--o{ UPLOAD_JOB : "uploads"
+  SITE ||--o{ ERP_CONNECTOR : "has"
+  SITE ||--o{ REPORT : "generates"
+  USER ||--o{ AUDIT_LOG : "performed"
+  CONFIGURATION ||--o{ SITE : "scoped_to"

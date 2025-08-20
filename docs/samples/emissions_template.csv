@@ -1,0 +1,4 @@
+site_id,emission_type,value,unit,timestamp,reference_id
+c1a2b3d4-0000-4000-8000-000000000001,Scope 1 - Fuel Combustion,123.45,kg,2025-08-01T08:00:00Z,INV-1001
+c1a2b3d4-0000-4000-8000-000000000001,Scope 2 - Purchased Electricity,987.00,kg,2025-08-01T08:00:00Z,INV-1002
+c1a2b3d4-0000-4000-8000-000000000002,Scope 1 - Fugitive Emissions,0.5,kg,2025-08-02T12:30:00Z,

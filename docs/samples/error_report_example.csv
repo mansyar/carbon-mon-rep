@@ -1,0 +1,4 @@
+row_number,site_id,emission_type,value,unit,timestamp,errors
+2,c1a2b3d4-0000-4000-8000-000000000001,Scope 1 - Fuel Combustion,,-,2025-08-01T08:00:00Z,value missing; unit invalid
+4,INVALID-UUID,Scope 2 - Purchased Electricity,500,kg,2025-08-01T08:00:00Z,site_id not a valid UUID
+6,c1a2b3d4-0000-4000-8000-000000000003,Scope 1,-100,kg,2025-08-03T09:00:00Z,value must be >= 0
