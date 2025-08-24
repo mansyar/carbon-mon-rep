@@ -6,14 +6,40 @@ on:
   pull_request:
     branches: [ main, master ]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:7463/carbon_dev?schema=public
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Bun
+      - name: Setup Bun
+        id: setup_bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: stable
+          bun-download-url: https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip
+        continue-on-error: true
+
+      - name: Cache Bun
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: "Fallback: install Bun via curl"
+        if: steps.setup_bun.outcome != 'success'
         run: |
           curl -fsSL https://bun.sh/install | bash -s -- --no-chmod
           echo "BUN_INSTALL=$HOME/.bun" >> $GITHUB_ENV
@@ -23,16 +49,124 @@ jobs:
         run: bun --version
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
+
+      - name: Start Postgres
+        run: docker compose up -d postgres
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            docker compose exec -T postgres pg_isready -U postgres && break || sleep 2
+          done
+
+      - name: Prisma migrate (CI)
+        run: bunx prisma migrate deploy
 
       - name: Generate Prisma client
         run: bunx prisma generate
 
-      - name: Lint (if configured)
-        run: bun workspace run lint || true
+      - name: Seed DB
+        run: bun prisma/seed.ts
 
-      - name: Run tests (if present)
-        run: bun workspace run test || true
+      - name: Lint
+        run: |
+          bun run lint
+
+      - name: Run unit tests
+        run: |
+          bun run test
 
       - name: Build workspaces (optional)
-        run: bun workspace run build || true
+        run: |
+          bun run build || echo "build step optional"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # NOTE: Image build & push moved to Milestone 7.
+      # The build/push steps were intentionally removed for Milestone 0 to keep CI focused
+      # on install, lint, tests, and integration smoke tests. Re-introduce publishing in M7.
+      - name: Build images (skipped - Milestone 7)
+        run: echo "Build/push skipped in M0 (see Milestone 7)"
+
+  integration:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:7463/carbon_dev?schema=public
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        id: setup_bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: stable
+          bun-download-url: https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip
+        continue-on-error: true
+
+      - name: Cache Bun
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: "Fallback: install Bun via curl"
+        if: steps.setup_bun.outcome != 'success'
+        run: |
+          curl -fsSL https://bun.sh/install | bash -s -- --no-chmod
+          echo "BUN_INSTALL=$HOME/.bun" >> $GITHUB_ENV
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Verify Bun
+        run: bun --version
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Start Postgres via docker compose
+        run: |
+          docker compose up -d postgres
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            docker compose exec -T postgres pg_isready -U postgres && break || sleep 2
+          done
+
+      - name: Prisma migrate + generate
+        run: |
+          bunx prisma migrate deploy
+          bunx prisma generate
+
+      - name: Seed DB
+        run: bun prisma/seed.ts
+
+      - name: Build backend
+        run: bun --filter=@carbon/backend run build
+
+      - name: Install jq (required by integration script)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Run integration smoke script
+        run: |
+          chmod +x scripts/test/integration.sh
+          chmod +x scripts/test/smoke.sh
+          scripts/test/integration.sh
+          scripts/test/smoke.sh
+
+      - name: Tear down compose (best-effort)
+        if: always()
+        run: docker compose down -v || true

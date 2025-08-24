@@ -1,0 +1,36 @@
+# Node / Bun
+node_modules/
+.bun/
+bun.lockb*
+
+# Build output
+dist/
+build/
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Coverage
+coverage/
+
+# Prisma local DB (ignore local sqlite if used for quick dev)
+prisma/dev.db

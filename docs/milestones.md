@@ -14,11 +14,14 @@ How to use
 Milestones (mapped from TDD / vertical-slices)
 
 - Milestone 0 — Project Setup (Week 0)
-  - [ ] Repo skeleton verified (monorepo packages present)
-  - [ ] Dev scripts: install, dev, format, lint
-  - [ ] DB migrations & seed runnable (`prisma migrate dev`, `prisma db seed`)
-  - [ ] "Hello World" backend and frontend running
+  - [x] Repo skeleton verified (monorepo packages present)
+  - [x] Dev scripts: install, dev, format, lint
+  - [x] DB migrations & seed runnable (`prisma migrate dev`, `prisma db seed`)
+  - [x] "Hello World" backend and frontend running
   - DoD: dev env reproducible, README quickstart validated
+  - Owner: @m.ansyarafi
+  - ETA: 2025-08-28
+  - PR: TBD (branch: feature/m0-scaffold; commit: chore(m0): finalize Milestone 0 scaffold)
 
 - Milestone 1 — Authentication & RBAC (Week 1)
   - Slice IDs: A.1.1, A.1.2, A.2.1

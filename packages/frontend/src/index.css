@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* Minimal example styles for M0 */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.app-container {
+  @apply min-h-screen flex items-center justify-center bg-gray-50;
+}

@@ -3,16 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "start": "node ./dist/index.js",
-    "build": "bun build src/index.ts --outdir dist --format cjs",
+    "build": "bun build src/index.ts --outdir dist --target node --packages external --sourcemap=linked --format esm",
     "prisma:generate": "bunx prisma generate",
     "prisma:migrate": "bunx prisma migrate dev --name init",
-    "seed": "bunx ts-node prisma/seed.ts",
+    "seed": "bun prisma/seed.ts",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
-    "test": "vitest"
+    "test": "vitest --run"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -29,6 +30,8 @@
     "@typescript-eslint/parser": "^5.0.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "eslint": "^8.0.0",
-    "prettier": "^2.0.0"
+    "prettier": "^2.0.0",
+    "supertest": "^6.3.3",
+    "@types/supertest": "^2.0.12"
   }
 }

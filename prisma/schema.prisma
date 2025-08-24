@@ -7,11 +7,94 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  DATA_ENTRY
+  AUDITOR
+  VIEWER
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(DATA_ENTRY)
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+}
+
+model Site {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  metadata  Json?
+  createdAt DateTime @default(now()) @db.Timestamptz
+}
+
 model Emission {
-  id        Int      @id @default(autoincrement())
-  amount    Decimal  @db.Decimal(18, 6)
-  unit      String
-  source    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(uuid()) @db.Uuid
+  siteId       String   @db.Uuid
+  emissionType String   @db.VarChar(50)
+  value        Decimal  @db.Decimal(18, 6)
+  unit         String
+  timestamp    DateTime
+  referenceId  String?
+  createdBy    String?  @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  @@index([siteId, timestamp])
+  @@index([emissionType])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  action    String
+  targetType String
+  targetId  String?  @db.Uuid
+  diff      Json?
+  createdAt DateTime @default(now()) @db.Timestamptz
+  @@index([userId, createdAt])
+}
+
+model CsvMapping {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  mapping   Json
+  createdBy String?  @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz
+}
+
+model UploadJob {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @db.Uuid
+  fileUrl      String?
+  status       String
+  insertedCount Int?
+  failedCount  Int?
+  errorFileUrl String?
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt
+}
+
+model Report {
+  id        String   @id @default(uuid()) @db.Uuid
+  siteId    String   @db.Uuid
+  periodFrom DateTime
+  periodTo  DateTime
+  format    String
+  fileUrl   String?
+  status    String
+  createdAt DateTime @default(now()) @db.Timestamptz
+}
+
+model ErpConnector {
+  id         String   @id @default(uuid()) @db.Uuid
+  siteId     String   @db.Uuid
+  type       String
+  config     String
+  lastSyncAt DateTime?
+  status     String
+  createdAt  DateTime @default(now()) @db.Timestamptz
 }
