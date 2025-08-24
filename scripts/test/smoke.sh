@@ -28,4 +28,14 @@ echo "POST response: $POST_RESP"
 echo "3) GET /api/emissions"
 curl -sS -f http://localhost:3000/api/emissions | jq .
 
+# Teardown backend process if run locally (skip in CI)
+if [ -z "${CI:-}" ]; then
+  if ps -p $BACKEND_PID > /dev/null 2>&1; then
+    echo "Stopping backend (pid: $BACKEND_PID)..."
+    kill $BACKEND_PID || true
+  fi
+else
+  echo "Detected CI environment; leaving backend process running for subsequent steps"
+fi
+
 echo "Smoke checks completed."

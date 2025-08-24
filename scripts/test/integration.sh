@@ -58,10 +58,14 @@ curl -sS -f http://localhost:3000/api/emissions | jq .
 
 echo "Integration smoke tests completed."
 
-# Teardown backend process if run locally
-if ps -p $BACKEND_PID > /dev/null 2>&1; then
-  echo "Stopping backend (pid: $BACKEND_PID)..."
-  kill $BACKEND_PID || true
+# Teardown backend process if run locally (skip in CI)
+if [ -z "${CI:-}" ]; then
+  if ps -p $BACKEND_PID > /dev/null 2>&1; then
+    echo "Stopping backend (pid: $BACKEND_PID)..."
+    kill $BACKEND_PID || true
+  fi
+else
+  echo "Detected CI environment; leaving backend process running for subsequent steps"
 fi
 
 echo "Done."
