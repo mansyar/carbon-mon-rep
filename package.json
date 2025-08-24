@@ -10,11 +10,29 @@
     "bun": ">=1.0.0"
   },
   "scripts": {
-    "dev": "bun workspace run dev",
-    "start": "bun workspace run start",
-    "build": "bun workspace run build",
-    "lint": "bun workspace run lint",
-    "test": "bun workspace run test",
-    "format": "bun workspace run format"
+    "dev": "bun --filter=@carbon/* run dev",
+    "start": "bun --filter=@carbon/* run start",
+    "build": "bun --filter=@carbon/* run build",
+    "lint": "bun --filter=@carbon/* run lint",
+    "test:backend": "bun --filter=@carbon/backend run test",
+    "test:frontend": "bun --filter=@carbon/frontend run test",
+    "test": "bun run test:backend && bun run test:frontend",
+    "format": "bun --filter=@carbon/* run format",
+    "prisma:generate": "bunx prisma generate",
+    "prisma:migrate:dev": "bunx prisma migrate dev --name init",
+    "prisma:seed": "bunx ts-node prisma/seed.ts",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^8.0.0",
+    "lint-staged": "^13.0.0",
+    "prettier": "^2.0.0"
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx,js,jsx}": [
+      "eslint --fix"
+    ]
   }
 }

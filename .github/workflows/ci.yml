@@ -41,17 +41,17 @@ jobs:
       - name: Generate Prisma client
         run: bunx prisma generate
 
-      - name: Lint (if configured)
+      - name: Lint
         run: |
-          echo "Skipping workspace lint in CI (configure package scripts to enable)."
+          bun workspace run lint
 
-      - name: Run tests (if present)
+      - name: Run unit tests
         run: |
-          echo "Skipping workspace tests in PR CI (configure package scripts to enable)."
+          bun workspace run test
 
       - name: Build workspaces (optional)
         run: |
-          echo "Skipping workspace build in CI (configure package scripts to enable)."
+          bun workspace run build || echo "build step optional"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -60,24 +60,70 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push backend image
-        if: github.event_name != 'pull_request'
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./packages/backend/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/mansyar/carbon-mon-rep/backend:${{ github.sha }}
-            ghcr.io/mansyar/carbon-mon-rep/backend:latest
+      # NOTE: Image build & push moved to Milestone 7.
+      # The build/push steps were intentionally removed for Milestone 0 to keep CI focused
+      # on install, lint, tests, and integration smoke tests. Re-introduce publishing in M7.
+      - name: Build images (skipped - Milestone 7)
+        run: echo "Build/push skipped in M0 (see Milestone 7)"
 
-      - name: Build and push frontend image
-        if: github.event_name != 'pull_request'
-        uses: docker/build-push-action@v4
+  integration:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          context: .
-          file: ./packages/frontend/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/mansyar/carbon-mon-rep/frontend:${{ github.sha }}
-            ghcr.io/mansyar/carbon-mon-rep/frontend:latest
+          bun-version: stable
+          bun-download-url: https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip
+        continue-on-error: true
+
+      - name: "Fallback: install Bun via curl"
+        if: steps.setup_bun.outcome != 'success'
+        run: |
+          curl -fsSL https://bun.sh/install | bash -s -- --no-chmod
+          echo "BUN_INSTALL=$HOME/.bun" >> $GITHUB_ENV
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Verify Bun
+        run: bun --version
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Start Postgres via docker-compose
+        run: |
+          docker-compose up -d postgres
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            docker-compose exec -T postgres pg_isready -U postgres && break || sleep 2
+          done
+
+      - name: Prisma migrate + generate
+        run: |
+          bunx prisma migrate dev --name ci --skip-seed || true
+          bunx prisma generate
+
+      - name: Seed DB
+        run: bunx ts-node prisma/seed.ts
+
+      - name: Install jq (required by integration script)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Run integration smoke script
+        run: |
+          chmod +x scripts/test/integration.sh
+          scripts/test/integration.sh
+
+      - name: Tear down compose (best-effort)
+        if: always()
+        run: docker-compose down -v || true
