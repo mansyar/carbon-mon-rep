@@ -43,15 +43,15 @@ jobs:
 
       - name: Lint
         run: |
-          bun workspace run lint
+          bun run lint
 
       - name: Run unit tests
         run: |
-          bun workspace run test
+          bun run test
 
       - name: Build workspaces (optional)
         run: |
-          bun workspace run build || echo "build step optional"
+          bun run build || echo "build step optional"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
