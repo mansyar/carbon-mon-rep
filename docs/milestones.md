@@ -21,7 +21,7 @@ Milestones (mapped from TDD / vertical-slices)
   - DoD: dev env reproducible, README quickstart validated
   - Owner: @m.ansyarafi
   - ETA: 2025-08-28
-  - PR: TBD (branch: feature/m0-scaffold; commit: chore(m0): finalize Milestone 0 scaffold)
+  - PR: merged (commit: 5fa4f848b12434f60242752effe6719146d429f1)
 
 - Milestone 1 — Authentication & RBAC (Week 1)
   - Slice IDs: A.1.1, A.1.2, A.2.1
