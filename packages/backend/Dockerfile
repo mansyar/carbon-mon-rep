@@ -3,13 +3,15 @@ FROM oven/bun:latest
 WORKDIR /app
 
 # Copy manifests first for caching installs
-COPY package.json bun.lockb* ./
+COPY packages/backend/package.json packages/backend/bun.lockb* ./
+# Copy root prisma schema into backend image so `prisma generate` can run during build
+COPY prisma ./prisma
 
 # Install dependencies (dev deps included for dev image)
 RUN bun install
 
 # Copy source
-COPY . .
+COPY packages/backend ./
 
 # Generate Prisma client if possible (no-op if prisma not setup yet)
 RUN bunx prisma generate || true

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, master ]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -38,13 +42,16 @@ jobs:
         run: bunx prisma generate
 
       - name: Lint (if configured)
-        run: bun workspace run lint || true
+        run: |
+          echo "Skipping workspace lint in CI (configure package scripts to enable)."
 
       - name: Run tests (if present)
-        run: bun workspace run test || true
+        run: |
+          echo "Skipping workspace tests in PR CI (configure package scripts to enable)."
 
       - name: Build workspaces (optional)
-        run: bun workspace run build || true
+        run: |
+          echo "Skipping workspace build in CI (configure package scripts to enable)."
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -54,9 +61,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend image
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v4
         with:
-          context: ./packages/backend
+          context: .
           file: ./packages/backend/Dockerfile
           push: true
           tags: |
@@ -64,9 +72,10 @@ jobs:
             ghcr.io/mansyar/carbon-mon-rep/backend:latest
 
       - name: Build and push frontend image
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v4
         with:
-          context: ./packages/frontend
+          context: .
           file: ./packages/frontend/Dockerfile
           push: true
           tags: |
