@@ -9,7 +9,7 @@
     "preview": "bunx vite preview",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest --run"
   },
   "dependencies": {
     "react": "^18.2.0",
