@@ -12,26 +12,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "Starting Postgres via docker-compose..."
-docker-compose up -d postgres
-
-echo "Waiting for Postgres to become ready..."
-# Loop until pg_isready succeeds inside the postgres container
-until docker-compose exec -T postgres pg_isready -U postgres >/dev/null 2>&1; do
-  echo "Postgres not ready yet... sleeping 2s"
-  sleep 2
-done
-
-echo "Postgres is ready. Running Prisma migrations and generate..."
-bunx prisma migrate dev --name ci --skip-seed || true
-bunx prisma generate
-
-echo "Running idempotent seed..."
-bunx ts-node prisma/seed.ts
+echo "Assuming Postgres and database have been started and seeded by the workflow."
+echo "If running locally, run: docker compose up -d postgres && bunx prisma migrate deploy && bunx ts-node prisma/seed.ts"
 
 echo "Starting backend in background..."
-# Start backend via workspace script; this will use Bun to run the backend entrypoint
-bun workspace run dev &
+# Start backend using built dist if available, otherwise fall back to dev mode
+if [ -f "packages/backend/dist/index.js" ]; then
+  node packages/backend/dist/index.js &
+else
+  echo "Dist not found, starting backend in dev mode..."
+  bun workspace run dev &
+fi
 BACKEND_PID=$!
 
 # Wait for backend to be ready
