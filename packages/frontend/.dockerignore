@@ -1,0 +1,41 @@
+# Node/Bun build artifacts
+node_modules
+dist
+.build
+coverage
+
+# Vite / frontend build output
+*.html
+*.map
+assets
+build
+out
+/.parcel-cache
+
+# Local editor/OS files
+.vscode
+.idea
+.DS_Store
+
+# Git and CI
+.git
+.gitignore
+.github
+.env
+.env.local
+*.log
+npm-debug.log*
+yarn-error.log
+
+# Package manager lockfiles (do not ignore bun.lockb if your Dockerfile copies it)
+# Keep package.json and bun.lockb in the build context so Dockerfile can use them for caching installs.
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Temporary files
+tmp
+*.tgz
+
+# Docker artifacts
+docker-compose.override.yml
