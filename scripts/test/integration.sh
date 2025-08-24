@@ -18,7 +18,7 @@ echo "If running locally, run: docker compose up -d postgres && bunx prisma migr
 echo "Starting backend in background..."
 # Start backend using built dist if available, otherwise fall back to dev mode
 if [ -f "packages/backend/dist/index.js" ]; then
-  node packages/backend/dist/index.js &
+  bun packages/backend/dist/index.js &
 else
   echo "Dist not found, starting backend in dev mode..."
   bun workspace run dev &
