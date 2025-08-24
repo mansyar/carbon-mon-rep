@@ -13,6 +13,7 @@
     "dev": "bun --filter=@carbon/* run dev",
     "start": "bun --filter=@carbon/* run start",
     "build": "bun --filter=@carbon/* run build",
+    "typecheck": "bun --filter=@carbon/* run typecheck",
     "lint": "bun --filter=@carbon/* run lint",
     "test:backend": "bun --filter=@carbon/backend run test",
     "test:frontend": "bun --filter=@carbon/frontend run test",

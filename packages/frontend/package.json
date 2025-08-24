@@ -8,6 +8,7 @@
     "build": "bunx vite build",
     "preview": "bunx vite preview",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "typecheck": "tsc --noEmit",
     "test": "vitest"
   },
   "dependencies": {
