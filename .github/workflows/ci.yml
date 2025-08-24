@@ -15,9 +15,10 @@ jobs:
 
       - name: Setup Bun
         id: setup_bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: stable
+          bun-download-url: https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip
         continue-on-error: true
 
       - name: "Fallback: install Bun via curl"
