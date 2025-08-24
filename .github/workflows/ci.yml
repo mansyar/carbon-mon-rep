@@ -13,11 +13,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Bun
-        run: |
-          curl -fsSL https://bun.sh/install | bash -s -- --no-chmod
-          echo "BUN_INSTALL=$HOME/.bun" >> $GITHUB_ENV
-          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: stable
 
       - name: Verify Bun
         run: bun --version
@@ -36,3 +35,30 @@ jobs:
 
       - name: Build workspaces (optional)
         run: bun workspace run build || true
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./packages/backend
+          file: ./packages/backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/mansyar/carbon-mon-rep/backend:${{ github.sha }}
+            ghcr.io/mansyar/carbon-mon-rep/backend:latest
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./packages/frontend
+          file: ./packages/frontend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/mansyar/carbon-mon-rep/frontend:${{ github.sha }}
+            ghcr.io/mansyar/carbon-mon-rep/frontend:latest
