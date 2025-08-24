@@ -163,7 +163,9 @@ jobs:
       - name: Run integration smoke script
         run: |
           chmod +x scripts/test/integration.sh
+          chmod +x scripts/test/smoke.sh
           scripts/test/integration.sh
+          scripts/test/smoke.sh
 
       - name: Tear down compose (best-effort)
         if: always()
