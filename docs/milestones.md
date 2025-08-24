@@ -19,6 +19,8 @@ Milestones (mapped from TDD / vertical-slices)
   - [ ] DB migrations & seed runnable (`prisma migrate dev`, `prisma db seed`)
   - [ ] "Hello World" backend and frontend running
   - DoD: dev env reproducible, README quickstart validated
+  - Owner: @m.ansyarafi
+  - ETA: 2025-08-28
 
 - Milestone 1 — Authentication & RBAC (Week 1)
   - Slice IDs: A.1.1, A.1.2, A.2.1
