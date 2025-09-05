@@ -55,30 +55,42 @@ DATABASE / PRISMA
   - Default: 10
 
 AUTH & SECURITY
-- JWT_SECRET (string) — HMAC secret or private key used to sign access tokens
-  - Required (production).
+- ACCESS_TOKEN_SECRET (string) — HMAC secret used to sign HS256 access tokens (matches `ACCESS_TOKEN_SECRET` used in code)
+  - Required in production.
+  - Note: older configs may use `JWT_SECRET`; `ACCESS_TOKEN_SECRET` is the canonical variable for access tokens.
 
-- JWT_EXPIRES_IN (integer | string) — access token TTL in seconds or string
-  - Example: 3600 or "1h"
-  - Default: 3600
+- ACCESS_TOKEN_TTL (integer | string) — access token time-to-live accepted by jwt (examples: `"15m"`, `900`, or `"1h"`)
+  - Example: "15m"
+  - Default (dev): "15m"
+  - In code this maps to `ACCESS_TOKEN_TTL`.
 
-- JWT_REFRESH_SECRET (string) — secret used to sign refresh tokens
-  - Required if using refresh tokens.
+- REFRESH_TOKEN_EXPIRES_SECONDS (integer) — preferred refresh token TTL expressed in seconds. If present this takes precedence.
+  - Example: 2592000
+  - Used by code as `REFRESH_TOKEN_EXPIRES_SECONDS`.
 
-- REFRESH_TOKEN_EXPIRES_IN (integer | string) — refresh token TTL
-  - Example: 604800 or "7d"
+- REFRESH_TOKEN_EXPIRES_DAYS (integer) — alternative configuration for refresh TTL expressed in days (used if seconds absent)
+  - Example: 30
+  - Note: code will compute seconds from days when `REFRESH_TOKEN_EXPIRES_SECONDS` is not set.
 
-- BCRYPT_SALT_ROUNDS (integer) — bcrypt cost factor
+- JWT_REFRESH_SECRET (string) — (optional) signing secret if you implement JWT-based refresh tokens; not required for opaque/DB-backed refresh sessions.
+  - Only required if your deployment uses signed refresh JWTs.
+
+- BCRYPT_SALT_ROUNDS (integer) — bcrypt cost factor used by password hashing utilities
   - Example: 12
   - Default: 12
 
-- TOKEN_REVOKE_STORE (string) — where revoked refresh tokens are stored (redis|db)
+- TOKEN_REVOKE_STORE (string) — where revoked refresh tokens / sessions are checked (redis|db)
   - Example: redis
   - If `redis`, `REDIS_URL` must be set.
 
-- PASSWORD_POLICY_MIN_LENGTH (integer)
+- PASSWORD_POLICY_MIN_LENGTH (integer) — minimum characters enforced by password policy (complemented by password regex in code)
   - Example: 10
   - Optional; enforce in app-level validation.
+
+- ADDITIONAL NOTES:
+  - The codebase currently expects `ACCESS_TOKEN_SECRET`, `ACCESS_TOKEN_TTL`, and either `REFRESH_TOKEN_EXPIRES_SECONDS` or `REFRESH_TOKEN_EXPIRES_DAYS`. Ensure these are set in production.
+  - `TOKEN_REVOKE_STORE=redis` enables fast revocation checks via Redis and requires `REDIS_URL`.
+  - Keep `ACCESS_TOKEN_SECRET` and `JWT_REFRESH_SECRET` rotated and stored in a secrets manager. Never commit them to the repo.
 
 STORAGE & UPLOADS
 - OBJECT_STORAGE_PROVIDER (string) — one of ("s3", "minio", "local")

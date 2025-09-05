@@ -1,5 +1,6 @@
 import express from 'express'
 import bodyParser from 'body-parser'
+import authRouter from './routes/auth'
 import emissionsRouter from './routes/emissions'
 import type { Server } from 'http'
 
@@ -10,6 +11,16 @@ app.use(bodyParser.json())
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
+
+import usersRouter from './routes/users'
+import rolesRouter from './routes/roles'
+
+// Auth routes (login / refresh / revoke)
+app.use('/api/auth', authRouter)
+
+// User and role management
+app.use('/api/users', usersRouter)
+app.use('/api/roles', rolesRouter)
 
 app.use('/api/emissions', emissionsRouter)
 

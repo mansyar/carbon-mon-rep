@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
@@ -7,7 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
+enum LegacyRole {
   ADMIN
   DATA_ENTRY
   AUDITOR
@@ -18,7 +19,7 @@ model User {
   id           String   @id @default(uuid()) @db.Uuid
   username     String   @unique
   passwordHash String
-  role         Role     @default(DATA_ENTRY)
+  role         LegacyRole     @default(DATA_ENTRY)
   createdAt    DateTime @default(now()) @db.Timestamptz
   updatedAt    DateTime @updatedAt
   deletedAt    DateTime?
@@ -97,4 +98,51 @@ model ErpConnector {
   lastSyncAt DateTime?
   status     String
   createdAt  DateTime @default(now()) @db.Timestamptz
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt
+  rolePermissions RolePermission[]
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  isBuiltin   Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt
+  rolePermissions RolePermission[]
+  userRoles UserRole[]
+}
+
+model RolePermission {
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+  role         Role   @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  roleId     String   @db.Uuid
+  assignedBy String?  @db.Uuid
+  assignedAt DateTime @default(now()) @db.Timestamptz
+  role       Role     @relation(fields: [roleId], references: [id])
+}
+
+model RefreshSession {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @db.Uuid
+  refreshTokenHash    String
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedBySessionId String?  @db.Uuid
+  createdAt           DateTime @default(now()) @db.Timestamptz
 }

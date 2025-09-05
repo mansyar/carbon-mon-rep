@@ -2,7 +2,7 @@
 FROM oven/bun:latest AS deps
 WORKDIR /app
 COPY packages/frontend/package.json packages/frontend/bun.lockb* ./
-RUN bun install --production
+RUN bun install
 
 FROM oven/bun:latest AS build
 WORKDIR /app

@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -10,8 +11,14 @@ const p = prisma as any
  * - Upsert a default site (by fixed id)
  * - Upsert sample emissions (by fixed ids)
  * - Upsert a CsvMapping and UploadJob (by fixed ids)
+ * - Seed builtin permissions & roles and assign ADMIN role to admin user
  *
  * This seed uses deterministic UUIDs for resources so repeated runs are safe.
+ *
+ * Usage:
+ *   SEED_ADMIN_PASSWORD=secret npm run prisma:seed
+ * If SEED_ADMIN_PASSWORD is not provided the default password "secret" is used.
+ * The password is hashed with bcrypt at seed time.
  */
 
 const SITE_ID = '00000000-0000-0000-0000-000000000001'
@@ -20,8 +27,68 @@ const EMISSION_IDS = [
   '00000000-0000-0000-0000-000000000102',
   '00000000-0000-0000-0000-000000000103',
 ]
-const CSV_MAPPING_ID = '00000000-0000-0000-0000-000000000201'
+const CSV_MAPPING_ID = '00000000-0000-0000-000000000201'
 const UPLOAD_JOB_ID = '00000000-0000-0000-0000-000000000301'
+
+// Admin password for seed (env or default)
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'secret'
+const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10)
+
+async function seedPermissionsAndRoles() {
+  const builtinPermissions = [
+    'emissions.create',
+    'emissions.read',
+    'emissions.update',
+    'emissions.delete',
+    'audit.read',
+    'users.manage',
+    'roles.manage',
+  ]
+
+  const builtinRoles: { name: string; description?: string; permissions: string[] }[] = [
+    { name: 'ADMIN', description: 'Full access', permissions: builtinPermissions },
+    {
+      name: 'DATA_ENTRY',
+      description: 'Create and manage emissions',
+      permissions: ['emissions.create', 'emissions.read', 'emissions.update'],
+    },
+    { name: 'VIEWER', description: 'Read-only access', permissions: ['emissions.read'] },
+    { name: 'AUDITOR', description: 'View emissions and audits', permissions: ['emissions.read', 'audit.read'] },
+  ]
+
+  // Ensure permissions exist
+  for (const pname of builtinPermissions) {
+    await prisma.permission.upsert({
+      where: { name: pname },
+      update: {},
+      create: { name: pname, description: undefined },
+    })
+  }
+
+  // Ensure roles exist and attach permissions
+  for (const r of builtinRoles) {
+    const role = await prisma.role.upsert({
+      where: { name: r.name },
+      update: { description: r.description ?? null, isBuiltin: true },
+      create: { name: r.name, description: r.description ?? null, isBuiltin: true },
+    })
+
+    for (const pname of r.permissions) {
+      const perm = await prisma.permission.findUnique({ where: { name: pname } })
+      if (!perm) continue
+      // create relation if not exists
+      try {
+        await prisma.rolePermission.create({
+          data: { roleId: role.id, permissionId: perm.id },
+        })
+      } catch (e) {
+        // ignore duplicate errors
+      }
+    }
+  }
+
+  return
+}
 
 async function main() {
   // Admin user (username is unique in schema)
@@ -30,15 +97,34 @@ async function main() {
     update: {
       role: 'ADMIN',
       updatedAt: new Date(),
+      passwordHash: ADMIN_PASSWORD_HASH,
     },
     create: {
       username: 'admin',
-      // NOTE: passwordHash here is a placeholder. Replace with a hashed password for real usage.
-      passwordHash: 'seed-placeholder-hash',
+      passwordHash: ADMIN_PASSWORD_HASH,
       role: 'ADMIN',
     },
   })
   console.log('Upserted user:', admin.username)
+  console.log('Seed admin password (use SEED_ADMIN_PASSWORD to override):', ADMIN_PASSWORD)
+
+  // Seed permissions & roles and ensure ADMIN role exists
+  await seedPermissionsAndRoles()
+  const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } })
+  if (adminRole) {
+    // assign role to user via UserRole table (idempotent)
+    try {
+      await prisma.userRole.createMany({
+        data: [{ userId: admin.id, roleId: adminRole.id, assignedBy: null }],
+        skipDuplicates: true,
+      })
+      console.log(`Assigned role ADMIN to user ${admin.username}`)
+    } catch (e) {
+      // ignore
+    }
+  } else {
+    console.warn('ADMIN role not found after seeding roles')
+  }
 
   // Default site (use fixed id so upsert is idempotent)
   const site = await p.site.upsert({

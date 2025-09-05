@@ -21,6 +21,63 @@ components:
         message:
           type: string
       required: [code, message]
+    Permission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        is_builtin:
+          type: boolean
+        permissions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UserWithRoles:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Role"
+        permissions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
     AuthRequest:
       type: object
       properties:
@@ -325,6 +382,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /auth/revoke:
+    post:
+      summary: Revoke a refresh token (authenticated)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+              required: [refreshToken]
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
   /users:
     post:
       summary: Create user (Admin only)
@@ -351,6 +433,48 @@ paths:
                     type: string
                   role:
                     type: string
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+
+  /users/{id}/roles:
+    post:
+      summary: Assign a role to a user (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role_id:
+                  type: string
+                  format: uuid
+              required: [role_id]
+      responses:
+        "200":
+          description: Role assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
         "400":
           description: Validation error
           content:

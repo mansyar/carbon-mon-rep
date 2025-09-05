@@ -92,3 +92,40 @@ export interface ErpConnectorDTO {
   status: string
   created_at: string
 }
+
+/**
+ * RBAC / Auth DTOs (Milestone 1)
+ */
+export interface PermissionDTO {
+  id: string
+  name: string
+  description?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface RoleDTO {
+  id: string
+  name: string
+  description?: string
+  is_builtin: boolean
+  permissions: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface UserWithRolesDTO {
+  id: string
+  username: string
+  roles: RoleDTO[]
+  permissions: string[]
+  created_at: string
+}
+
+export interface RefreshSessionDTO {
+  id: string
+  user_id: string
+  expires_at: string
+  revoked_at?: string
+  created_at: string
+}

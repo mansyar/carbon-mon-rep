@@ -25,6 +25,7 @@
     "prepare": "husky install"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "eslint": "^8.0.0",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^8.0.0",
@@ -35,5 +36,10 @@
     "**/*.{ts,tsx,js,jsx}": [
       "eslint --fix"
     ]
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "ioredis": "^5.7.0",
+    "jsonwebtoken": "^9.0.2"
   }
 }

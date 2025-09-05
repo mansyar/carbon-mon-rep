@@ -1,10 +1,15 @@
 import express from 'express'
 import { listEmissions, createEmission } from '../services/emissionService'
 import { ZodError } from 'zod'
+import authenticate, { AuthenticatedRequest } from '../middleware/authenticate'
+import requirePermission from '../middleware/requirePermission'
 
 const router = express.Router()
 
-router.get('/', async (_req, res) => {
+/**
+ * List emissions (requires read permission)
+ */
+router.get('/', authenticate, requirePermission('emissions.read'), async (_req, res) => {
   try {
     const items = await listEmissions()
     res.json(items)
@@ -14,10 +19,14 @@ router.get('/', async (_req, res) => {
   }
 })
 
-router.post('/', async (req, res) => {
+/**
+ * Create emission (requires create permission) and threads the authenticated user id as createdBy.
+ */
+router.post('/', authenticate, requirePermission('emissions.create'), async (req: AuthenticatedRequest, res) => {
   try {
     const payload = req.body
-    const created = await createEmission(payload)
+    const userId = req.user?.id
+    const created = await createEmission(payload, userId)
     res.status(201).json(created)
   } catch (e) {
     if (e instanceof ZodError) {
